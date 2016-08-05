@@ -6,19 +6,23 @@ from datetime import datetime
 BAD_ARTISTS = ["ANTENNE BAYERN"]
 
 
-def main(url):
-    stream, meta_interval = get_stream(url)
+def print_streamtitle_formatted(url):
+    stream = get_stream(url)
+    meta_interval = stream.metaint
 
     try:
         while True:
             meta_data_parsed = get_metadata_once(stream, meta_interval)
             if meta_data_parsed is not None:
                 if "StreamTitle" in meta_data_parsed:
-                    artist, song = split_stream_title(meta_data_parsed["StreamTitle"])
-                    if artist not in BAD_ARTISTS:
-                        print(str(datetime.now()) + "\t" + artist + " ~ " + song)
-                    else:
-                        eprint(str(datetime.now()) + "\t" + artist + " ~ " + song)
+                    try:
+                        artist, song = meta_data_parsed["StreamTitle"].split(" - ", 1)
+                        if artist not in BAD_ARTISTS:
+                            print(str(datetime.now()) + "\t" + artist + " ~ " + song)
+                        else:
+                            eprint(str(datetime.now()) + "\t" + artist + " ~ " + song)
+                    except ValueError:  # Unpack error
+                        eprint(str(datetime.now()) + "\t" + "StreamTitle bad(?):" + meta_data_parsed["StreamTitle"])
                 else:
                     eprint(str(datetime.now()) + "\t" + str(meta_data_parsed))
     except KeyboardInterrupt:
@@ -36,7 +40,8 @@ def get_stream(stream_url):
         stream_url: HTTP URL where the stream can be found
 
     Returns:
-        (stream, metaint) where metaint is the meta interval
+        The data stream from the server as obtained by `urllib.request.urlopen(...)`.
+        Has the special attribute `metaint` which is the mp3 meta interval.
     """
     request = Request(stream_url, headers={"Icy-MetaData": "1",
                                            "User-Agent": "VLC/2.2.4 LibVLC/2.2.4"})
@@ -52,7 +57,9 @@ def get_stream(stream_url):
         print("Are you sure the server we're talking to is a Icecast (... compatible thingy)?")
         meta_interval = None
 
-    return stream, meta_interval
+    stream.metaint = meta_interval
+
+    return stream
 
 
 def get_metadata_once(stream, metaint):
@@ -63,7 +70,7 @@ def get_metadata_once(stream, metaint):
         metaint: metaint fron `get_stream(...)`
 
     Returns:
-        The parsed metadata as a dict (key => value), sometimes potentially unescaped, if available.
+        The parsed metadata as a dict (key => value) (sometimes potentially unescaped), if available.
         Returns `None` if metadata length was specified as 0.
     """
     stream.read(metaint)  # Eat the useless mp3 data
@@ -107,20 +114,5 @@ def parse_icy_metadata(data_string):
     return metadata
 
 
-def split_stream_title(stream_title):
-    """
-    Splits the stream title into artist and song name
-    Args:
-        stream_title: The StreamTitle as aquired from the stream meta data.
-
-    Returns:
-        (ARTIST_NAME, SONG_NAME)
-    """
-    split_title = stream_title.split(" - ")
-    if len(split_title) == 1:
-        split_title[1] = None
-    return split_title
-
-
 if __name__ == "__main__":
-    main("http://mp3channels.webradio.antenne.de:80/antenne")
+    print_streamtitle_formatted("http://mp3channels.webradio.antenne.de:80/antenne")
