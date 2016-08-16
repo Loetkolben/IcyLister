@@ -6,7 +6,14 @@ from datetime import datetime
 BAD_ARTISTS = ["ANTENNE BAYERN"]
 
 
-def print_streamtitle_formatted(url):
+def print_streamtitles(url, bad_to_stderr=True):
+    """
+    Prints `Current Time <TAB> StreamTitle as Artist ~ Song title` as acquired from stream metadata to STDOUT,
+    until interrupted by Ctrl+C.
+    Args:
+        url: Stream URL
+        bad_to_stderr: Print "bad' unwanted artists to STDERR (True) or skip them (False)
+    """
     stream = get_stream(url)
     meta_interval = stream.metaint
 
@@ -19,7 +26,7 @@ def print_streamtitle_formatted(url):
                         artist, song = meta_data_parsed["StreamTitle"].split(" - ", 1)
                         if artist not in BAD_ARTISTS:
                             print(str(datetime.now()) + "\t" + artist + " ~ " + song)
-                        else:
+                        elif bad_to_stderr:
                             eprint(str(datetime.now()) + "\t" + artist + " ~ " + song)
                     except ValueError:  # Unpack error
                         eprint(str(datetime.now()) + "\t" + "StreamTitle bad(?):" + meta_data_parsed["StreamTitle"])
@@ -115,4 +122,4 @@ def parse_icy_metadata(data_string):
 
 
 if __name__ == "__main__":
-    print_streamtitle_formatted("http://mp3channels.webradio.antenne.de:80/antenne")
+    print_streamtitles("http://mp3channels.webradio.antenne.de:80/antenne")
