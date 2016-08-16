@@ -6,36 +6,6 @@ from datetime import datetime
 BAD_ARTISTS = ["ANTENNE BAYERN"]
 
 
-def print_streamtitles(url, bad_to_stderr=True):
-    """
-    Prints `Current Time <TAB> StreamTitle as Artist ~ Song title` as acquired from stream metadata to STDOUT,
-    until interrupted by Ctrl+C.
-    Args:
-        url: Stream URL
-        bad_to_stderr: Print "bad' unwanted artists to STDERR (True) or skip them (False)
-    """
-    stream = get_stream(url)
-    meta_interval = stream.metaint
-
-    try:
-        while True:
-            meta_data_parsed = get_metadata_once(stream, meta_interval)
-            if meta_data_parsed is not None:
-                if "StreamTitle" in meta_data_parsed:
-                    try:
-                        artist, song = meta_data_parsed["StreamTitle"].split(" - ", 1)
-                        if artist not in BAD_ARTISTS:
-                            print(str(datetime.now()) + "\t" + artist + " ~ " + song)
-                        elif bad_to_stderr:
-                            eprint(str(datetime.now()) + "\t" + artist + " ~ " + song)
-                    except ValueError:  # Unpack error
-                        eprint(str(datetime.now()) + "\t" + "StreamTitle bad(?):" + meta_data_parsed["StreamTitle"])
-                else:
-                    eprint(str(datetime.now()) + "\t" + str(meta_data_parsed))
-    except KeyboardInterrupt:
-        stream.close()
-
-
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
@@ -121,5 +91,44 @@ def parse_icy_metadata(data_string):
     return metadata
 
 
+def print_stream_titles(stream_url, bad_to_stderr=True):
+    """
+    Prints `Current Time <TAB> StreamTitle as Artist ~ Song title` as acquired from stream metadata to STDOUT,
+    until interrupted by Ctrl+C. Unwanted artists may and errors will be printed to STDERR.
+    Args:
+        stream_url: Stream URL
+        bad_to_stderr: Print 'bad' unwanted artists to STDERR (True) or skip them (False)
+    """
+    stream = get_stream(stream_url)
+    meta_interval = stream.metaint
+
+    try:
+        while True:
+            meta_data_parsed = get_metadata_once(stream, meta_interval)
+            if meta_data_parsed is not None:
+                if "StreamTitle" in meta_data_parsed:
+                    try:
+                        artist, song = meta_data_parsed["StreamTitle"].split(" - ", 1)
+                        if artist not in BAD_ARTISTS:
+                            print(str(datetime.now()) + "\t" + artist + " ~ " + song)
+                        elif bad_to_stderr:
+                            eprint(str(datetime.now()) + "\t" + artist + " ~ " + song)
+                    except ValueError:  # Unpack error
+                        eprint(str(datetime.now()) + "\t" + "StreamTitle bad(?):" + meta_data_parsed["StreamTitle"])
+                else:
+                    eprint(str(datetime.now()) + "\t" + str(meta_data_parsed))
+    except KeyboardInterrupt:
+        stream.close()
+
+
 if __name__ == "__main__":
-    print_streamtitles("http://mp3channels.webradio.antenne.de:80/antenne")
+    argv = sys.argv
+    if len(argv) == 2:
+        url = argv[1]
+    else:
+        print("ERR: Bad arguments")
+        print("Usage: $ py -3 icylister.py <STREAM_URL>")
+        print("Depending on your shell / cmd / whatever, STREAM_URL may need to be escaped and / or quoted.")
+        sys.exit(1)
+
+    print_stream_titles(url)
