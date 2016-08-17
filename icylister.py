@@ -3,8 +3,6 @@ import sys
 from urllib.request import Request, urlopen
 from datetime import datetime
 
-BAD_ARTISTS = ["ANTENNE BAYERN"]
-
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -91,12 +89,13 @@ def parse_icy_metadata(data_string):
     return metadata
 
 
-def print_stream_titles(stream_url, bad_to_stderr=True):
+def print_stream_titles(stream_url, bad_artists=[], bad_to_stderr=True):
     """
     Prints `Current Time <TAB> StreamTitle as Artist ~ Song title` as acquired from stream metadata to STDOUT,
     until interrupted by Ctrl+C. Unwanted artists may and errors will be printed to STDERR.
     Args:
         stream_url: Stream URL
+        bad_artists: A list of bad, unwanted artists. Will be hidden or printed to STDERR depending on `bad_to_stderr`.
         bad_to_stderr: Print 'bad' unwanted artists to STDERR (True) or skip them (False)
     """
     stream = get_stream(stream_url)
@@ -109,7 +108,7 @@ def print_stream_titles(stream_url, bad_to_stderr=True):
                 if "StreamTitle" in meta_data_parsed:
                     try:
                         artist, song = meta_data_parsed["StreamTitle"].split(" - ", 1)
-                        if artist not in BAD_ARTISTS:
+                        if artist not in bad_artists:
                             print(str(datetime.now()) + "\t" + artist + " ~ " + song)
                         elif bad_to_stderr:
                             eprint(str(datetime.now()) + "\t" + artist + " ~ " + song)
@@ -123,12 +122,17 @@ def print_stream_titles(stream_url, bad_to_stderr=True):
 
 if __name__ == "__main__":
     argv = sys.argv
-    if len(argv) == 2:
-        url = argv[1]
-    else:
+    if len(argv) < 2:
         print("ERR: Bad arguments")
-        print("Usage: $ py -3 icylister.py <STREAM_URL>")
+        print("Usage: $ py -3 icylister.py <STREAM_URL> [BAD_ARTIST]")
         print("Depending on your shell / cmd / whatever, STREAM_URL may need to be escaped and / or quoted.")
+        print("BAD_ARTIST can be repeated to list multiple artists. It is case-sensitive")
         sys.exit(1)
 
-    print_stream_titles(url)
+    url = argv[1]
+    bad = argv[2:] if len(argv) >= 2 else []
+
+    eprint("# Stream URL : " + url)
+    eprint("# Bad Artists : " + str(bad))
+
+    print_stream_titles(url, bad)
