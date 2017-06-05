@@ -1,4 +1,6 @@
-import sys, re
+import sys
+import os
+import re
 
 from urllib.request import Request, urlopen
 from datetime import datetime
@@ -83,7 +85,7 @@ def get_metadata_once(stream, metaint):
         Returns `None` if metadata length was specified as 0.
     """
     stream.read(metaint)  # Eat the useless mp3 data
-    meta_len = int(stream.read(1).hex(), 16) * 16  # This just feels so wrong. There has to be a better way...
+    meta_len = int.from_bytes(stream.read(1), 'big') * 16
     if meta_len > 0:
         meta_data = stream.read(meta_len).replace(b"\x00", b"")
         meta_data = meta_data.decode("Windows-1252")  # Default western code page? Seems to work, so...
@@ -121,6 +123,10 @@ def print_stream_titles(stream_url, title_blacklist=[]):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: icylister.py URL [BLACKLIST REGEX 1] [BLACKLIST REGEX 2] [BLACKLIST REGEX ...]")
+        os.exit(1)
+
     url = sys.argv[1]
 
     blacklist_str = sys.argv[2:]
